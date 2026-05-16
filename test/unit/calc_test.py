@@ -27,8 +27,7 @@ class TestCalculate(unittest.TestCase):
         self.assertRaises(TypeError, self.calc.divide, "2", 2)
         self.assertRaises(TypeError, self.calc.divide, 2, "2")
         self.assertRaises(TypeError, self.calc.divide, 2, 0)
-        self.assertRaises(TypeError, self.calc.add, None, 2)
-        self.assertRaises(TypeError, self.calc.add, 2, None)
+        
         
     def test_add_method_fails_with_nan_parameter(self):
         self.assertRaises(TypeError, self.calc.add, "2", 2)

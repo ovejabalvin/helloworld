@@ -1,7 +1,7 @@
-import app # pragma: no cover
+import app
 
 
-class InvalidPermissions(Exception): # pragma: no cover
+class InvalidPermissions(Exception):
     pass
 
 
