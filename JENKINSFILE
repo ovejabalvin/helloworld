@@ -61,16 +61,25 @@ pipeline {
             }
         }
 
-      stage('Rest') {
+    stage('Rest') {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
                     bat '''
+                        set BUILD_ID=dontKillMe
                         set JENKINS_NODE_COOKIE=dontKillMe
                         set FLASK_APP=app\\api.py
                         set FLASK_ENV=development
-                        start /b flask run <NUL > flask.log 2>&1
-                        start /b java -jar "C:\\Users\\Andres\\Downloads\\wiremock-standalone-3.13.2.jar" --port 9090 --root-dir test\\wiremock <NUL > wiremock.log 2>&1
-                        timeout /t 5
+                        
+                        echo "1. Iniciando Flask en segundo plano..."
+                        start "" /B flask run > flask.log 2>&1
+                        
+                        echo "2. Iniciando Wiremock en segundo plano..."
+                        start "" /B java -jar "C:\\Users\\Andres\\Downloads\\wiremock-standalone-3.13.2.jar" --port 9090 --root-dir test\\wiremock > wiremock.log 2>&1
+                        
+                        echo "3. Esperando 5 segundos a que arranquen..."
+                        ping 127.0.0.1 -n 6 > nul
+                        
+                        echo "4. Ejecutando pruebas Pytest..."
                         set PYTHONPATH=%WORKSPACE%
                         pytest --junitxml=result-rest.xml test\\rest
                     '''
@@ -78,7 +87,6 @@ pipeline {
                 junit 'result-rest.xml'
             }    
         }
-        
         stage('Performance') {
             steps {
                 bat 'jmeter -n -t test\\jmeter\\flask.jmx -l result.jtl'
