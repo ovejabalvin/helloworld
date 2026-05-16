@@ -61,23 +61,22 @@ pipeline {
             }
         }
 
-    stage('Rest') {
+   stage('Rest') {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
                     bat '''
-                        set BUILD_ID=dontKillMe
                         set JENKINS_NODE_COOKIE=dontKillMe
                         set FLASK_APP=app\\api.py
                         set FLASK_ENV=development
                         
                         echo "1. Iniciando Flask en segundo plano..."
-                        start "" /B flask run > flask.log 2>&1
+                        start "" /B python -m flask run > flask.log 2>&1 <NUL
                         
                         echo "2. Iniciando Wiremock en segundo plano..."
-                        start "" /B java -jar "C:\\Users\\Andres\\Downloads\\wiremock-standalone-3.13.2.jar" --port 9090 --root-dir test\\wiremock > wiremock.log 2>&1
+                        start "" /B java -jar "C:\\Users\\Andres\\Downloads\\wiremock-standalone-3.13.2.jar" --port 9090 --root-dir test\\wiremock > wiremock.log 2>&1 <NUL
                         
                         echo "3. Esperando 5 segundos a que arranquen..."
-                        ping 127.0.0.1 -n 6 > nul
+                        ping 127.0.0.1 -n 6 > NUL
                         
                         echo "4. Ejecutando pruebas Pytest..."
                         set PYTHONPATH=%WORKSPACE%
