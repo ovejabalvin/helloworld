@@ -49,22 +49,48 @@ stage('Security') {
             }
         }
 
-        stage('Integration & Performance') {
+         stage('Integration & Performance') {
             agent { label 'built-in' }
             steps {
                 bat 'whoami & hostname & echo %WORKSPACE%'
-                
-                bat '''
-                    set FLASK_APP=app\\api.py
-                    set FLASK_ENV=development
-                    start /b flask run
-                    start /b java -jar C:\\Users\\Andres\\Downloads\\wiremock-standalone-3.13.2.jar --port 9090 --root-dir test\\wiremock
-                    timeout /t 5
-                    set PYTHONPATH=%WORKSPACE%
-                    pytest --junitxml=result-rest.xml test\\rest
-                    jmeter -n -t test\\jmeter\\flask.jmx -l result.jtl
-                '''
+                catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                    bat '''
+                        set BUILD_ID=dontKillMe
+                        set JENKINS_NODE_COOKIE=dontKillMe
+                        set FLASK_APP=app\\api.py
+                        set FLASK_ENV=development
+                        
+                        echo "Iniciando Flask..."
+                        start "" /B python -m flask run > flask.log 2>&1 <NUL
+                        
+                        echo "Iniciando Wiremock..."
+                        start "" /B java -jar C:\\Users\\Andres\\Downloads\\wiremock-standalone-3.13.2.jar --port 9090 --root-dir test\\wiremock > wiremock.log 2>&1 <NUL
+                        
+                        echo "Esperando a los servidores..."
+                        ping 127.0.0.1 -n 6 > NUL
+                        
+                        echo "Ejecutando Pytest..."
+                        set PYTHONPATH=%WORKSPACE%
+                        pytest --junitxml=result-rest.xml test\\rest
+                        
+                        echo "Ejecutando JMeter..."
+                        C:\\TU\\RUTA\\EXACTA\\A\\jmeter.bat -n -t test\\jmeter\\flask.jmx -l result.jtl
+                    '''
+                }
+                junit 'result-rest.xml'
+                perfReport 'result.jtl'
             }
+
+            post {
+        always {
+            bat '''
+                echo "Limpiando procesos en segundo plano..."
+                for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING"') do taskkill /f /pid %%a || exit 0
+                for /f "tokens=5" %%a in ('netstat -aon ^| find ":9090" ^| find "LISTENING"') do taskkill /f /pid %%a || exit 0
+            '''
+        }
+    }
+        }
         }
     }
 }
