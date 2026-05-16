@@ -1,0 +1,68 @@
+pipeline {
+    agent none 
+
+    stages {
+        stage('Get Code') {
+            agent { label 'built-in' } 
+            steps {
+                git 'https://github.com/ovejabalvin/helloworld.git'
+                bat 'whoami & hostname & echo %WORKSPACE%'
+            }
+        }
+
+        stage('Parallel Quality Checks') {
+            parallel {
+                stage('Unit & Coverage') {
+                    agent { label 'built-in' }
+                    steps {
+                        bat 'whoami & hostname & echo %WORKSPACE%'
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                            bat '''
+                                set PYTHONPATH=%WORKSPACE%
+                                pytest --junitxml=result-unit.xml --cov=app --cov-report=xml:coverage.xml test\\unit
+                            '''
+                        }
+                        junit 'result-unit.xml'
+                        recordCoverage(tools: [[parser: 'COBERTURA', pattern: 'coverage.xml']])
+                    }
+                }
+
+                stage('Static Analysis') {
+                    agent { label 'built-in' }
+                    steps {
+                        bat 'whoami & hostname & echo %WORKSPACE%'
+                        bat 'flake8 app test > flake8.out || exit 0'
+                        recordIssues tools: [flake8(pattern: 'flake8.out')]
+                    }
+                }
+
+                stage('Security') {
+                    agent { label 'built-in' }
+                    steps {
+                        bat 'whoami & hostname & echo %WORKSPACE%'
+                        bat 'bandit -r app -f custom -o bandit.out || exit 0'
+                        recordIssues tools: [bandit(pattern: 'bandit.out')]
+                    }
+                }
+            }
+        }
+
+        stage('Integration & Performance') {
+            agent { label 'built-in' }
+            steps {
+                bat 'whoami & hostname & echo %WORKSPACE%'
+                
+                bat '''
+                    set FLASK_APP=app\\api.py
+                    set FLASK_ENV=development
+                    start /b flask run
+                    start /b java -jar C:\\Users\\Andres\\Downloads\\wiremock-standalone-3.13.2.jar --port 9090 --root-dir test\\wiremock
+                    timeout /t 5
+                    set PYTHONPATH=%WORKSPACE%
+                    pytest --junitxml=result-rest.xml test\\rest
+                    jmeter -n -t test\\jmeter\\flask.jmx -l result.jtl
+                '''
+            }
+        }
+    }
+}
