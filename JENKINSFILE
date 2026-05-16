@@ -12,8 +12,13 @@ pipeline {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     bat '''
+                        echo "Borrando cachés antiguos y forzando lectura nueva..."
                         if exist coverage.xml del coverage.xml
                         if exist result-unit.xml del result-unit.xml
+                        if exist test\\unit\\_pycache_ rmdir /s /q test\\unit\\_pycache_
+                        if exist app\\_pycache_ rmdir /s /q app\\_pycache_
+                        
+                        set PYTHONDONTWRITEBYTECODE=1
                         set PYTHONPATH=%WORKSPACE%
                         pip install pytest-cov
                         pytest --junitxml=result-unit.xml --cov=app.calc --cov-branch --cov-report=xml:coverage.xml test\\unit
