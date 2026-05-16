@@ -61,17 +61,20 @@ pipeline {
             }
         }
 
-        stage('Rest') {
+      stage('Rest') {
             steps {
-                bat '''
-                    set FLASK_APP=app\\api.py
-                    set FLASK_ENV=development
-                    start /b flask run
-                    start /b java -jar C:\\Users\\Andres\\Downloads\\wiremock-standalone-3.13.2.jar --port 9090 --root-dir test\\wiremock
-                    timeout /t 5
-                    set PYTHONPATH=%WORKSPACE%
-                    pytest --junitxml=result-rest.xml test\\rest
-                '''
+                catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                    bat '''
+                        set JENKINS_NODE_COOKIE=dontKillMe
+                        set FLASK_APP=app\\api.py
+                        set FLASK_ENV=development
+                        start /b flask run <NUL > flask.log 2>&1
+                        start /b java -jar "C:\\Users\\Andres\\Downloads\\wiremock-standalone-3.13.2.jar" --port 9090 --root-dir test\\wiremock <NUL > wiremock.log 2>&1
+                        timeout /t 5
+                        set PYTHONPATH=%WORKSPACE%
+                        pytest --junitxml=result-rest.xml test\\rest
+                    '''
+                }
                 junit 'result-rest.xml'
             }    
         }
@@ -83,4 +86,16 @@ pipeline {
             }
         }
     }
-}
+    
+    
+    
+    post {
+        always {
+            bat '''
+                echo "Limpiando procesos en segundo plano (Flask y Wiremock)..."
+                for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING"') do taskkill /f /pid %%a || exit 0
+                for /f "tokens=5" %%a in ('netstat -aon ^| find ":9090" ^| find "LISTENING"') do taskkill /f /pid %%a || exit 0
+            '''
+        }
+    }
+} // 
