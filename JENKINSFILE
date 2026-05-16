@@ -8,13 +8,13 @@ pipeline {
             }
         }
 
-        stage('Unit') {
+         stage('Unit') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     bat '''
                         set PYTHONPATH=%WORKSPACE%
                         pip install pytest-cov
-                        pytest --junitxml=result-unit.xml --cov=app --cov-report=xml:coverage.xml test\\unit
+                        pytest --junitxml=result-unit.xml --cov=app/calc.py --cov-branch --cov-report=xml:coverage.xml test\\unit
                     '''
                 }
                 junit 'result-unit.xml'
