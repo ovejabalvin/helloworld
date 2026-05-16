@@ -86,9 +86,10 @@ pipeline {
                 junit 'result-rest.xml'
             }    
         }
-        stage('Performance') {
+       stage('Performance') {
             steps {
-                bat 'jmeter -n -t test\\jmeter\\flask.jmx -l result.jtl'
+                
+                bat '"C:\\Users\\Andres\\Desktop\\apache-jmeter-5.6.3\\apache-jmeter-5.6.3\\bin\\jmeter.bat" -n -t test\\jmeter\\flask.jmx -l result.jtl'
                 perfReport 'result.jtl'
             }
         }
